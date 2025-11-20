@@ -11,9 +11,11 @@
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
     rel="stylesheet"
   >
-
   <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  
+  <!-- DOCX Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/dist/index.iife.js"></script>
 
   <style>
     body {
@@ -68,66 +70,206 @@
       <h5>Hasil:</h5>
       <div id="output" class="mt-2"></div>
     </div>
+
+    <button id="downloadBtn" class="btn btn-success mt-3" style="display:none;">
+        ⬇️ Download DOCX
+      </button>
+    
   </div>
 
   <script>
     const API_KEY = "AIzaSyAn_URJGyydNYrdbvlL5utMUypqyY78h1I";
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
     const dataawal =" Buatkan struktur notula berdasarkan dokumen yang diupload dari msteam dibawah. Struktur harus mencakup bagian-bagian utama dan sub-bagiannya, serta poin-poin penting di dalamnya, dengan format sebagai berikut: \n1. Judul Notula \n 2. Dasar \n 3. Waktu dan Tempat \n 4. Peserta \n 5. Agenda (Daftar poin-poin agenda dibuat ringkasan yang detail ya! dari record upload msteam) \n 6. Kesimpulan \n berikut adalah txt hasil baca :\n";
-    // === Fitur Upload File TXT ===
-    $("#fileInput").on("change", function (event) {
-      const file = event.target.files[0];
-      if (file && file.type === "text/plain") {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          $("#prompt").val( dataawal +"\n"+ e.target.result);
-        };
-        reader.readAsText(file, "UTF-8");
-      } else {
-        alert("Silakan unggah file dengan format .txt saja.");
-        $(this).val(""); // reset input
+    // Upload TXT
+  $("#fileInput").on("change", function (event) {
+    const file = event.target.files[0];
+    if (file && file.type === "text/plain") {
+      const reader = new FileReader();
+      reader.onload = (e) => $("#prompt").val(e.target.result);
+      reader.readAsText(file, "UTF-8");
+    } else {
+      alert("Silakan unggah file .txt!");
+      $(this).val("");
+    }
+  });
+
+  // Generate API request
+  $("#generateBtn").click(async function () {
+    const prompt = $("#prompt").val().trim();
+    if (!prompt) {
+      alert("Masukkan prompt dulu atau upload file!");
+      return;
+    }
+
+    $(".spinner-border").show();
+    $("#resultCard").hide();
+    $("#downloadBtn").hide();
+
+    try {
+      const response = await $.ajax({
+        url: `${API_URL}?key=${API_KEY}`,
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        }),
+      });
+
+      const output = response?.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada respons.";
+      $("#output").text(output);
+      $("#resultCard").show();
+      $("#downloadBtn").show();
+
+    } catch (error) {
+      console.error("Error:", error);
+      $("#output").text("Terjadi kesalahan: " + (error.responseText || error.statusText));
+      $("#resultCard").show();
+
+    } finally {
+      $(".spinner-border").hide();
+    }
+  });
+
+  // Download DOCX
+  // Download DOCX dengan format rapi
+// Download DOCX dengan format rapi dan support **bold**
+$("#downloadBtn").click(async function () {
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    HeadingLevel,
+    TextRun
+  } = docx;
+
+  const text = $("#output").text().trim();
+  if (!text) {
+    alert("Tidak ada konten untuk diunduh!");
+    return;
+  }
+
+  // Fungsi untuk parsing bold Markdown-style (**text**)
+  const parseBold = (line) => {
+    const parts = [];
+    const regex = /\*\*(.*?)\*\*/g;
+    let lastIndex = 0, match;
+
+    while ((match = regex.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(new TextRun(line.substring(lastIndex, match.index)));
       }
-    });
+      parts.push(new TextRun({ text: match[1], bold: true }));
+      lastIndex = regex.lastIndex;
+    }
 
-    // === Tombol Generate ===
-    $("#generateBtn").click(async function () {
-      const prompt = $("#prompt").val().trim();
-      if (!prompt) {
-        alert("Masukkan prompt terlebih dahulu atau unggah file .txt!");
-        return;
+    if (lastIndex < line.length) {
+      parts.push(new TextRun(line.substring(lastIndex)));
+    }
+
+    return parts;
+  };
+
+  const lines = text.split("\n");
+  const paragraphs = [];
+
+  lines.forEach((line, index) => {
+    line = line.trim();
+    if (!line) return;
+
+    let cleanedLine = line.replace(/^\*\s+/, "").replace(/^\d+\.\s+/, "");
+
+    // Paragraf pertama -> Heading
+    if (index === 0) {
+      paragraphs.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          spacing: { after: 300 },
+          children: parseBold(cleanedLine)
+        })
+      );
+      return;
+    }
+
+    // Bullet list
+    if (/^\*\s+/.test(line)) {
+      paragraphs.push(
+        new Paragraph({
+          bullet: { level: 0 },
+          spacing: { after: 150 },
+          children: parseBold(cleanedLine)
+        })
+      );
+      return;
+    }
+
+    // Numbering
+    if (/^\d+\.\s+/.test(line)) {
+      paragraphs.push(
+        new Paragraph({
+          numbering: { reference: "numbering", level: 0 },
+          spacing: { after: 150 },
+          children: parseBold(cleanedLine)
+        })
+      );
+      return;
+    }
+
+    // Paragraf default
+    paragraphs.push(
+      new Paragraph({
+        spacing: { after: 200 },
+        children: parseBold(cleanedLine)
+      })
+    );
+  });
+
+  const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: "numbering",
+          levels: [
+            {
+              level: 0,
+              format: "decimal",
+              text: "%1.",
+              alignment: "left"
+            }
+          ]
+        }
+      ]
+    },
+    sections: [
+      {
+        properties: {
+          page: {
+            margin: {
+              top: 720,
+              bottom: 720,
+              left: 1000,
+              right: 1000
+            }
+          }
+        },
+        children: paragraphs
       }
+    ]
+  });
 
-      $(".spinner-border").show();
-      $("#resultCard").hide();
-
-      try {
-        const response = await $.ajax({
-          url: `${API_URL}?key=${API_KEY}`,
-          method: "POST",
-          contentType: "application/json",
-          data: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          }),
-        });
-
-        const output = response?.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada respons.";
-        $("#output").text(output);
-        $("#resultCard").show();
-
-      } catch (error) {
-        console.error("Error:", error);
-        $("#output").text("Terjadi kesalahan: " + (error.responseText || error.statusText));
-        $("#resultCard").show();
-      } finally {
-        $(".spinner-border").hide();
-      }
-    });
+  const blob = await Packer.toBlob(doc);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "gemini_output.docx";
+  a.click();
+});
   </script>
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
 
