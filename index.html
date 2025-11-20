@@ -33,28 +33,26 @@
 <body>
   <div class="container">
     <h1 class="text-center mb-4">💡 NotulAi By KPPN Lhokseumawe</h1>
-    <i>Powered By Gemini AI</i>
     <div class="card shadow p-4 mb-4">
+      
+      <!-- Upload file txt -->
+      <div class="mb-3">
+        <label for="fileInput" class="form-label">Unggah hasil transcribe MSTeam Zoom atau .txt</label>
+        <input type="file" id="fileInput" class="form-control" accept=".txt">
+      </div>
+      
       <div class="mb-3">
         <label for="prompt" class="form-label">Masukkan Prompt</label>
         <textarea id="prompt" class="form-control" rows="4" placeholder="Tulis sesuatu...">
             Buatkan struktur notula berdasarkan dokumen yang diupload dari msteam dibawah. Struktur harus mencakup bagian-bagian utama dan sub-bagiannya, serta poin-poin penting di dalamnya, dengan format sebagai berikut: \n
-1. Judul Notula \n
-2. Dasar \n
-3. Waktu dan Tempat \n
-4. Peserta \n
-5. Agenda (Daftar poin-poin agenda dibuat ringkasan yang detail ya! dari record upload msteam) \n
-6. Kesimpulan
-          
+        1. Judul Notula \n
+        2. Dasar \n
+        3. Waktu dan Tempat \n
+        4. Peserta \n
+        5. Agenda (Daftar poin-poin agenda dibuat ringkasan yang detail ya! dari record upload msteam) \n
+        6. Kesimpulan
         </textarea>
       </div>
-
-      <!-- Upload file txt -->
-      <div class="mb-3">
-        <label for="fileInput" class="form-label">Unggah hasil transcribe MSTeam atau .txt</label>
-        <input type="file" id="fileInput" class="form-control" accept=".txt">
-      </div>
-
       <button id="generateBtn" class="btn btn-primary w-100 mb-3">
         🔮 Generate
       </button>
@@ -80,19 +78,21 @@
   <script>
     const API_KEY = "AIzaSyAn_URJGyydNYrdbvlL5utMUypqyY78h1I";
     const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-    const dataawal =" Buatkan struktur notula berdasarkan dokumen yang diupload dari msteam dibawah. Struktur harus mencakup bagian-bagian utama dan sub-bagiannya, serta poin-poin penting di dalamnya, dengan format sebagai berikut: \n1. Judul Notula \n 2. Dasar \n 3. Waktu dan Tempat \n 4. Peserta \n 5. Agenda (Daftar poin-poin agenda dibuat ringkasan yang detail ya! dari record upload msteam) \n 6. Kesimpulan \n berikut adalah txt hasil baca :\n";
+    const dataawal =" Buatkan struktur notula berdasarkan dokumen yang diupload dari msteam or zoom or gmeet dibawah. Struktur harus mencakup bagian-bagian utama dan sub-bagiannya, serta poin-poin penting di dalamnya, dengan format sebagai berikut: \n1. Judul Notula \n 2. Dasar \n 3. Waktu dan Tempat \n 4. Peserta \n 5. Agenda (Daftar poin-poin agenda dibuat ringkasan yang detail ya! dari record upload msteam) \n 6. Kesimpulan \n berikut adalah txt hasil baca :\n";
     // Upload TXT
   $("#fileInput").on("change", function (event) {
-    const file = event.target.files[0];
-    if (file && file.type === "text/plain") {
-      const reader = new FileReader();
-      reader.onload = (e) => $("#prompt").val(e.target.result);
-      reader.readAsText(file, "UTF-8");
-    } else {
-      alert("Silakan unggah file .txt!");
-      $(this).val("");
-    }
-  });
+      const file = event.target.files[0];
+      if (file && file.type === "text/plain") {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          $("#prompt").val( dataawal +"\n"+ e.target.result);
+        };
+        reader.readAsText(file, "UTF-8");
+      } else {
+        alert("Silakan unggah file dengan format .txt or srt saja.");
+        $(this).val(""); // reset input
+      }
+    });
 
   // Generate API request
   $("#generateBtn").click(async function () {
@@ -269,6 +269,7 @@ $("#downloadBtn").click(async function () {
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
 
