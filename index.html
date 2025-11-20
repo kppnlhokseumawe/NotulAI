@@ -191,17 +191,17 @@ $("#downloadBtn").click(async function () {
       return;
     }
 
-    // Bullet list
-    if (/^\*\s+/.test(line)) {
-      paragraphs.push(
-        new Paragraph({
-          bullet: { level: 0 },
-          spacing: { after: 150 },
-          children: parseBold(cleanedLine)
-        })
-      );
-      return;
-    }
+    // // Bullet list
+    // if (/^\*\s+/.test(line)) {
+    //   paragraphs.push(
+    //     new Paragraph({
+    //       bullet: { level: 0 },
+    //       spacing: { after: 150 },
+    //       children: parseBold(cleanedLine)
+    //     })
+    //   );
+    //   return;
+    // }
 
     // Numbering
     if (/^\d+\.\s+/.test(line)) {
@@ -260,7 +260,7 @@ $("#downloadBtn").click(async function () {
   const blob = await Packer.toBlob(doc);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "gemini_output.docx";
+  a.download = "notulAioutput.docx";
   a.click();
 });
   </script>
@@ -269,6 +269,7 @@ $("#downloadBtn").click(async function () {
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+
 
 
 
